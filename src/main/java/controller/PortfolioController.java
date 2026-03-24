@@ -1,5 +1,5 @@
 package portfolio_service.controller;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +47,7 @@ public class PortfolioController {
     }
 
     // PUT /api/v1/portfolios/account/1/rebalance
+    @PreAuthorize("hasAnyRole('ADVISOR', 'ADMIN')")
     @PutMapping("/account/{accountId}/rebalance")
     public ResponseEntity<Portfolio> rebalancePortfolio(
             @PathVariable Long accountId) {

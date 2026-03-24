@@ -58,16 +58,14 @@ public class PortfolioService {
         Portfolio portfolio = getPortfolioByAccountId(accountId);
         List<Holding> holdings = portfolio.getHoldings();
 
-        if (holdings == null || holdings.isEmpty()) {
-            throw new RuntimeException("No holdings to rebalance");
-        }
-
         // Calculate total market value of all holdings
-        BigDecimal totalMarketValue = holdings.stream()
+        BigDecimal totalMarketValue = (holdings == null || holdings.isEmpty())
+                ? BigDecimal.ZERO
+                : holdings.stream()
                 .map(h -> h.getQuantity().multiply(h.getCurrentPrice()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Total portfolio = market value of stocks + cash balance
+        // Total portfolio = market value + cash
         BigDecimal totalPortfolioValue = totalMarketValue
                 .add(portfolio.getCashBalance());
 
