@@ -17,7 +17,7 @@ public class Trade {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
@@ -45,6 +45,8 @@ public class Trade {
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
-        this.status = TradeStatus.PENDING;
+        if (this.status == null) {
+            this.status = TradeStatus.PENDING;
+        }
     }
 }
