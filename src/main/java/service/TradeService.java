@@ -1,5 +1,7 @@
 package portfolio_service.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -8,7 +10,6 @@ import portfolio_service.model.*;
 import portfolio_service.repository.AccountRepository;
 import portfolio_service.repository.PortfolioRepository;
 import portfolio_service.repository.TradeRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,12 +22,15 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final PortfolioRepository portfolioRepository;
     private final AccountRepository accountRepository;
+    private final Counter tradeExecutionCounter;
+    private final Timer tradeExecutionTimer;
 
     @Transactional
     public Trade executeTrade(Long accountId, String symbol,
                               TradeType tradeType, BigDecimal quantity,
                               BigDecimal marketPrice) {
 
+        long start = System.currentTimeMillis();
         log.info("Executing {} trade: {} shares of {} for account {}",
                 tradeType, quantity, symbol, accountId);
 
@@ -39,24 +43,18 @@ public class TradeService {
                         "Portfolio not found for account: " + accountId));
 
         BigDecimal tradeValue = quantity.multiply(marketPrice);
-
-        // Validate before executing
         validateTrade(portfolio, tradeType, tradeValue, quantity);
 
-        // Update portfolio cash balance
         if (tradeType == TradeType.BUY) {
-            // Buying stocks — deduct cash
             portfolio.setCashBalance(
                     portfolio.getCashBalance().subtract(tradeValue));
         } else {
-            // Selling stocks — add cash
             portfolio.setCashBalance(
                     portfolio.getCashBalance().add(tradeValue));
         }
 
         portfolioRepository.save(portfolio);
 
-        // Record the trade
         Trade trade = Trade.builder()
                 .account(account)
                 .symbol(symbol)
@@ -68,16 +66,20 @@ public class TradeService {
                 .build();
 
         Trade saved = tradeRepository.save(trade);
-        log.info("Trade executed successfully. ID: {}", saved.getId());
+
+        // Track metrics
+        tradeExecutionCounter.increment();
+        long end = System.currentTimeMillis();
+        log.info("Trade executed in {}ms. ID: {}. Total trades: {}",
+                (end - start), saved.getId(), tradeExecutionCounter.count());
+
         return saved;
     }
 
-    // Get all trades for an account
     public List<Trade> getTradesByAccountId(Long accountId) {
         return tradeRepository.findByAccountId(accountId);
     }
 
-    // Get only executed trades
     public List<Trade> getExecutedTrades(Long accountId) {
         return tradeRepository.findByAccountIdAndStatus(
                 accountId, TradeStatus.EXECUTED);
@@ -85,13 +87,9 @@ public class TradeService {
 
     private void validateTrade(Portfolio portfolio, TradeType tradeType,
                                BigDecimal tradeValue, BigDecimal quantity) {
-
-        // Quantity must be positive
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Trade quantity must be positive");
         }
-
-        // For BUY — check sufficient cash balance
         if (tradeType == TradeType.BUY) {
             if (portfolio.getCashBalance().compareTo(tradeValue) < 0) {
                 throw new RuntimeException(
