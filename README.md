@@ -1,4 +1,4 @@
-# Fidelity Brokerage Platform
+# Brokerage Platform
 
 A scalable, secure microservices-based brokerage system
 handling 150K+ investment accounts.
