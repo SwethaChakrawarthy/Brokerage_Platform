@@ -39,7 +39,4 @@ mvn spring-boot:run
 ```
 
 ## Project Impact
-- 18% faster transaction processing
-- 22% improved API response times
-- 35% reduction in manual reporting effort
-- Supports 150K+ investment accounts
+Simulates a brokerage backend with JWT-secured REST APIs, role-based access (ADVISOR/INVESTOR/ADMIN), a portfolio rebalancing engine, and Redis-backed caching for hot-path lookups. Containerized with Docker and deployable to Kubernetes.
